@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Finance
+    username: postgres
+    password: 1234
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  frontend-base-url: http://localhost:5173
+  reset-token-minutes: 30
+  jwt:
+    secret: <SECRET>replace-with-a-long-secret-key-for-production
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
+
+  security:
+    require-https: false
+  backup:
+    script-path: ../scripts/backup-finance.ps1
