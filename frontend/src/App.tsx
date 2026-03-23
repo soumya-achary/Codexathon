@@ -1,9 +1,9 @@
-﻿
+
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from "recharts";
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { api } from "./api/client";
 import { Shell } from "./components/Shell";
 import { Card, EmptyState, PageHeader } from "./components/Ui";
@@ -159,10 +159,10 @@ function LoginPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (mode === "login") return (await axios.post<AuthResponse>("/api/auth/login", { email, password })).data;
-      if (mode === "register") return (await axios.post<AuthResponse>("/api/auth/register", { email, password, displayName })).data;
-      if (mode === "forgot") return (await axios.post<ForgotPasswordResponse>("/api/auth/forgot-password", { email })).data;
-      return (await axios.post<{ message: string }>("/api/auth/reset-password", { token: resetToken, newPassword: password })).data;
+      if (mode === "login") return (await api.post<AuthResponse>("/auth/login", { email, password })).data;
+      if (mode === "register") return (await api.post<AuthResponse>("/auth/register", { email, password, displayName })).data;
+      if (mode === "forgot") return (await api.post<ForgotPasswordResponse>("/auth/forgot-password", { email })).data;
+      return (await api.post<{ message: string }>("/auth/reset-password", { token: resetToken, newPassword: password })).data;
     },
     onSuccess: (data) => {
       if (mode === "login") {
@@ -683,6 +683,7 @@ export default function App() {
     </Routes>
   );
 }
+
 
 
 

@@ -1,11 +1,11 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/Finance
-    username: postgres
-    password: 1234
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/Finance}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:1234}
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,14 +18,15 @@ spring:
       write-dates-as-timestamps: false
 
 app:
-  frontend-base-url: http://localhost:5173
-  reset-token-minutes: 30
+  frontend-base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+  reset-token-minutes: ${APP_RESET_TOKEN_MINUTES:30}
   jwt:
-    secret: <SECRET>replace-with-a-long-secret-key-for-production
-    expiration-ms: 86400000
-    refresh-expiration-ms: 604800000
+    secret: ${APP_JWT_SECRET:<SECRET>replace-with-a-long-secret-key-for-production}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${APP_JWT_REFRESH_EXPIRATION_MS:604800000}
 
   security:
-    require-https: false
+    require-https: ${APP_SECURITY_REQUIRE_HTTPS:false}
+    allowed-origins: ${APP_SECURITY_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   backup:
-    script-path: ../scripts/backup-finance.ps1
+    script-path: ${APP_BACKUP_SCRIPT_PATH:../scripts/backup-finance.ps1}

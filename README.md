@@ -72,6 +72,83 @@ Make sure `pg_dump` is available on your PATH.
 - Backend: `mvn -DskipTests package` passed
 - Frontend: `npm run build` passed
 
+## Azure Deployment Guide
+
+Recommended Azure setup:
+- Frontend: Azure Static Web Apps
+- Backend: Azure App Service (Java 21)
+- Database: Azure Database for PostgreSQL Flexible Server
+
+### 1. Create Azure PostgreSQL
+Create a PostgreSQL Flexible Server and a database named `Finance`.
+
+Collect these values:
+- Hostname
+- Database name
+- Username
+- Password
+- SSL mode requirements from Azure
+
+Recommended JDBC URL:
+
+```text
+jdbc:postgresql://YOUR_SERVER.postgres.database.azure.com:5432/Finance?sslmode=require
+```
+
+### 2. Deploy the Backend to Azure App Service
+Create a Linux Web App for Java 21 and deploy the `backend` module.
+
+From `backend` build the jar:
+
+```powershell
+mvn clean package
+```
+
+In Azure App Service, configure these application settings:
+
+```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://YOUR_SERVER.postgres.database.azure.com:5432/Finance?sslmode=require
+SPRING_DATASOURCE_USERNAME=YOUR_USERNAME
+SPRING_DATASOURCE_PASSWORD=YOUR_PASSWORD
+APP_FRONTEND_BASE_URL=https://YOUR_FRONTEND_DOMAIN
+APP_JWT_SECRET=replace-with-a-very-long-random-secret
+APP_SECURITY_REQUIRE_HTTPS=true
+APP_SECURITY_ALLOWED_ORIGINS=https://YOUR_FRONTEND_DOMAIN
+```
+
+If you use a custom frontend domain, put that exact HTTPS origin in both:
+- `APP_FRONTEND_BASE_URL`
+- `APP_SECURITY_ALLOWED_ORIGINS`
+
+### 3. Deploy the Frontend to Azure Static Web Apps
+Deploy the `frontend` folder and set this environment variable for the build:
+
+```text
+VITE_API_BASE_URL=https://YOUR_BACKEND_APP.azurewebsites.net/api
+```
+
+Build settings:
+- App location: `frontend`
+- Output location: `dist`
+
+Important:
+- Azure Static Web Apps does not automatically proxy `/api` to an external App Service.
+- If `VITE_API_BASE_URL` is missing, the frontend falls back to relative `/api`, which causes requests like `POST /api/auth/register` to hit the static site instead of your Spring backend.
+- That misconfiguration commonly shows up as `405 Method Not Allowed` with `allow: GET, HEAD, OPTIONS` on the `azurestaticapps.net` domain.
+
+### 4. Verify the Connection
+After both apps are live:
+- Open the frontend URL
+- Register a user
+- Confirm requests go to `https://YOUR_BACKEND_APP.azurewebsites.net/api/...`
+- Confirm password reset links point back to your frontend domain
+
+### 5. Important Notes
+- The app now supports environment-based API and CORS configuration for Azure deployment.
+- Do not keep the default JWT secret in production.
+- Do not use the local PostgreSQL credentials from this README in production.
+- The backup PowerShell script is Windows-oriented and is not suitable as-is for a Linux App Service deployment.
+
 ## Notes
 - Password reset works through a generated reset link in local development.
 - The recurring transaction scheduler runs hourly and creates due transactions automatically.
