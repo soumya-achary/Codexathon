@@ -27,9 +27,13 @@ jobs:
       - name: Build backend
         run: mvn -f backend/pom.xml clean package -DskipTests
 
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: finance-tracker-backend-2026
-          publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
           package: backend/target/finance-tracker-backend-0.0.1-SNAPSHOT.jar
