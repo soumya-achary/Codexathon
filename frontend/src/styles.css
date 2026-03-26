@@ -265,9 +265,17 @@ textarea {
 .sidebar-nav {
   display: grid;
   gap: 0.45rem;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 0.3rem;
+  padding-right: 0.1rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .nav-link {
