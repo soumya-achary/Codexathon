@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
@@ -99,10 +99,6 @@ export function Shell() {
               <div className="brand">Finance</div>
               <p className="muted sidebar-copy">Personal tracker</p>
             </div>
-          </div>
-          <div className="sidebar-intro">
-            <strong>Money hub</strong>
-            <p>Track spending, savings, budgets, and recurring plans from one focused workspace.</p>
           </div>
           <nav className="sidebar-nav">
             {links.map(([to, label]) => (
