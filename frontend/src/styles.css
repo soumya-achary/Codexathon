@@ -368,9 +368,7 @@ textarea {
 }
 
 .toolbar-shell {
-  position: sticky;
-  top: 1.2rem;
-  z-index: 10;
+  position: static;
   display: grid;
   gap: 1rem;
   padding: 1.2rem 1.3rem;
