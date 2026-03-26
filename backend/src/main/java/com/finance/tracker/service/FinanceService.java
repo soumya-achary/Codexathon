@@ -456,7 +456,9 @@ public class FinanceService {
         List<RecurringTransaction> upcoming = accessibleAccountIds.isEmpty() ? List.of() : recurringRepository.findTop5ByAccountIdInAndPausedFalseAndNextRunDateGreaterThanEqualOrderByNextRunDateAsc(accessibleAccountIds, LocalDate.now());
         BigDecimal income = sumByType(monthTransactions, "income");
         BigDecimal expense = sumByType(monthTransactions, "expense");
-        BigDecimal trackedBalance = accounts.stream().map(Account::getCurrentBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal trackedBalance = accounts.stream()
+                .map(account -> defaultMoney(account.getCurrentBalance()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalGoalTarget = goals.stream().map(Goal::getTargetAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalGoalCurrent = goals.stream().map(Goal::getCurrentAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         String topExpenseCategory = monthTransactions.stream()
@@ -549,7 +551,9 @@ public class FinanceService {
         List<Map<String, Object>> budgets = buildBudgetSnapshot(userId, currentMonth, currentMonthTransactions);
         BigDecimal monthIncome = sumByType(currentMonthTransactions, "income");
         BigDecimal monthExpense = sumByType(currentMonthTransactions, "expense");
-        BigDecimal trackedBalance = accounts.stream().map(Account::getCurrentBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal trackedBalance = accounts.stream()
+                .map(account -> defaultMoney(account.getCurrentBalance()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal savingsRate = monthIncome.compareTo(BigDecimal.ZERO) > 0
                 ? monthIncome.subtract(monthExpense).max(BigDecimal.ZERO)
@@ -718,15 +722,19 @@ public class FinanceService {
 
     public Map<String, Object> getForecastMonth(UUID userId) {
         List<Map<String, Object>> daily = getForecastDaily(userId);
-        BigDecimal currentBalance = getAccounts(userId).stream().map(Account::getCurrentBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal currentBalance = getAccounts(userId).stream()
+                .map(account -> defaultMoney(account.getCurrentBalance()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal endBalance = daily.isEmpty() ? currentBalance : (BigDecimal) daily.get(daily.size() - 1).get("projectedBalance");
         List<Map<String, Object>> upcoming = forecastKnownRecurring(userId).stream()
-                .map(item -> Map.<String, Object>of(
-                        "date", item.getNextRunDate(),
-                        "title", item.getTitle(),
-                        "type", item.getType(),
-                        "amount", item.getAmount()
-                ))
+                .map(item -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("date", item.getNextRunDate());
+                    row.put("title", item.getTitle());
+                    row.put("type", item.getType());
+                    row.put("amount", item.getAmount());
+                    return row;
+                })
                 .toList();
         BigDecimal remainingExpense = daily.stream().map(item -> (BigDecimal) item.get("projectedExpense")).reduce(BigDecimal.ZERO, BigDecimal::add);
         long daysRemaining = Math.max(1, daily.size());
@@ -746,7 +754,9 @@ public class FinanceService {
 
     public List<Map<String, Object>> getForecastDaily(UUID userId) {
         List<Account> accounts = getAccounts(userId);
-        BigDecimal runningBalance = accounts.stream().map(Account::getCurrentBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal runningBalance = accounts.stream()
+                .map(account -> defaultMoney(account.getCurrentBalance()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (accounts.isEmpty()) {
             return List.of();
         }
@@ -850,7 +860,8 @@ public class FinanceService {
             item.put("amount", b.getAmount());
             item.put("spent", spent);
             item.put("percent", pct);
-            item.put("thresholdReached", pct.compareTo(BigDecimal.valueOf(b.getAlertThresholdPercent())) >= 0);
+            int alertThreshold = b.getAlertThresholdPercent() == null ? 80 : b.getAlertThresholdPercent();
+            item.put("thresholdReached", pct.compareTo(BigDecimal.valueOf(alertThreshold)) >= 0);
             item.put("alertLevel", alertLevel);
             return item;
         }).toList();
@@ -903,7 +914,9 @@ public class FinanceService {
     private List<Map<String, Object>> buildNetWorthTrend(UUID userId, int months) {
         List<Account> accounts = getAccounts(userId);
         List<UUID> accessibleAccountIds = getAccessibleAccountIds(userId);
-        BigDecimal openingBalances = accounts.stream().map(Account::getOpeningBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal openingBalances = accounts.stream()
+                .map(account -> defaultMoney(account.getOpeningBalance()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         List<Map<String, Object>> result = new ArrayList<>();
         for (int i = months - 1; i >= 0; i--) {
             YearMonth ym = YearMonth.now().minusMonths(i);
@@ -958,6 +971,11 @@ public class FinanceService {
         List<UUID> accessibleAccountIds = getAccessibleAccountIds(userId);
         List<Transaction> currentTransactions = accessibleAccountIds.isEmpty() ? List.of() : transactionRepository.findByAccountIdInAndTransactionDateBetween(accessibleAccountIds, currentMonth.atDay(1), currentMonth.atEndOfMonth());
         List<Transaction> previousTransactions = accessibleAccountIds.isEmpty() ? List.of() : transactionRepository.findByAccountIdInAndTransactionDateBetween(accessibleAccountIds, previousMonth.atDay(1), previousMonth.atEndOfMonth());
+        if (incomeExpenseTrend.isEmpty() || savingsRateTrend.isEmpty()) {
+            return List.of(
+                    highlight("info", "Not enough history yet", "Add a bit more transaction history to unlock month-over-month insight highlights.")
+            );
+        }
 
         BigDecimal currentFood = currentTransactions.stream()
                 .filter(t -> "expense".equalsIgnoreCase(t.getType()) && t.getCategory() != null && "food".equalsIgnoreCase(t.getCategory().getName()))
@@ -1248,6 +1266,7 @@ public class FinanceService {
         LocalDate end = YearMonth.now().atEndOfMonth();
         return getRecurring(userId).stream()
                 .filter(item -> !item.isPaused())
+                .filter(item -> item.getNextRunDate() != null)
                 .filter(item -> !item.getNextRunDate().isBefore(today) && !item.getNextRunDate().isAfter(end))
                 .toList();
     }
@@ -1321,6 +1340,10 @@ public class FinanceService {
         return next;
     }
 }
+
+
+
+
 
 
 
