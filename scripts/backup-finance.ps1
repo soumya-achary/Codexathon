@@ -4,8 +4,13 @@ param(
     [string]$Database = "Finance",
     [string]$Username = "postgres",
     [string]$Password = "1234",
-    [string]$BackupRoot = "D:\New folder (2)\backups"
+    [string]$BackupRoot = ""
 )
+
+if ([string]::IsNullOrWhiteSpace($BackupRoot)) {
+    $projectRoot = Split-Path -Parent $PSScriptRoot
+    $BackupRoot = Join-Path $projectRoot "backups"
+}
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $targetDir = Join-Path $BackupRoot (Get-Date -Format "yyyy-MM-dd")

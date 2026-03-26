@@ -17,6 +17,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Page<Transaction> findByUserIdOrderByTransactionDateDescCreatedAtDesc(UUID userId, Pageable pageable);
 
+    Page<Transaction> findByAccountIdInOrderByTransactionDateDescCreatedAtDesc(List<UUID> accountIds, Pageable pageable);
+
     @Query("""
         select t from Transaction t
         where t.user.id = :userId
@@ -35,8 +37,30 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                              LocalDate startDate, LocalDate endDate, BigDecimal minAmount, BigDecimal maxAmount,
                              Pageable pageable);
 
+    @Query("""
+        select t from Transaction t
+        where t.account.id in :accountIds
+          and (lower(coalesce(t.merchant, '')) like lower(concat('%', :search, '%'))
+            or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%')))
+          and (:type is null or t.type = :type)
+          and (:accountId is null or t.account.id = :accountId)
+          and (:categoryId is null or t.category.id = :categoryId)
+          and (:startDate is null or t.transactionDate >= :startDate)
+          and (:endDate is null or t.transactionDate <= :endDate)
+          and (:minAmount is null or t.amount >= :minAmount)
+          and (:maxAmount is null or t.amount <= :maxAmount)
+        order by t.transactionDate desc, t.createdAt desc
+        """)
+    Page<Transaction> searchAccessible(List<UUID> accountIds, String search, String type, UUID accountId, UUID categoryId,
+                                       LocalDate startDate, LocalDate endDate, BigDecimal minAmount, BigDecimal maxAmount,
+                                       Pageable pageable);
+
     List<Transaction> findTop5ByUserIdOrderByTransactionDateDescCreatedAtDesc(UUID userId);
+    List<Transaction> findTop5ByAccountIdInOrderByTransactionDateDescCreatedAtDesc(List<UUID> accountIds);
     List<Transaction> findByUserIdAndTransactionDateBetween(UUID userId, LocalDate start, LocalDate end);
+    List<Transaction> findByAccountIdInAndTransactionDateBetween(List<UUID> accountIds, LocalDate start, LocalDate end);
+    Optional<Transaction> findByIdAndAccountIdIn(UUID id, List<UUID> accountIds);
     long countByUserIdAndAccountId(UUID userId, UUID accountId);
     long countByUserIdAndCategoryId(UUID userId, UUID categoryId);
+    long countByAccountId(UUID accountId);
 }

@@ -8,10 +8,15 @@ import type { AuditEvent, Dashboard } from "../types";
 
 const links = [
   ["/", "Dashboard"],
+  ["/categories", "Categories"],
   ["/transactions", "Transactions"],
   ["/budgets", "Budgets"],
   ["/goals", "Goals"],
   ["/reports", "Reports"],
+  ["/insights", "Insights"],
+  ["/forecast", "Forecast"],
+  ["/rules", "Rules"],
+  ["/shared-accounts", "Shared"],
   ["/recurring", "Recurring"],
   ["/accounts", "Accounts"],
   ["/settings", "Settings"],
@@ -71,6 +76,19 @@ export function Shell() {
     return [...alerts, ...events].slice(0, 8);
   }, [dashboard.data, auditEvents.data]);
 
+  const submitSearch = () => {
+    const next = search.trim();
+    navigate(next ? `/transactions?search=${encodeURIComponent(next)}` : "/transactions");
+  };
+
+  const applyDateRange = () => {
+    if (startDate) localStorage.setItem("finance_global_start", startDate);
+    else localStorage.removeItem("finance_global_start");
+    if (endDate) localStorage.setItem("finance_global_end", endDate);
+    else localStorage.removeItem("finance_global_end");
+    navigate("/reports");
+  };
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -117,7 +135,78 @@ export function Shell() {
       </aside>
       <main className="content">
         <div className="content-inner">
-<Outlet />
+          <div className="toolbar-shell">
+            <div className="toolbar-header">
+              <div>
+                <p className="eyebrow">Finance workspace</p>
+                <h2>Stay on top of money movement</h2>
+              </div>
+              <div className="toolbar-actions">
+                <button type="button" className="toolbar-primary" onClick={() => navigate("/transactions?modal=new")}>
+                  Add transaction
+                </button>
+              </div>
+            </div>
+            <div className="toolbar-lower">
+              <div className="toolbar-search">
+                <SearchIcon />
+                <input
+                  aria-label="Global transaction search"
+                  placeholder="Search transactions by merchant or note"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      submitSearch();
+                    }
+                  }}
+                />
+                <button type="button" className="action-chip" onClick={submitSearch}>Search</button>
+              </div>
+              <div className="toolbar-range-card">
+                <span className="toolbar-range-label">Date range</span>
+                <div className="toolbar-range">
+                  <input aria-label="Global start date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                  <input aria-label="Global end date" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                  <button type="button" className="action-chip" onClick={applyDateRange}>Apply</button>
+                </div>
+              </div>
+              <div className="toolbar-user">
+                <div style={{ position: "relative" }}>
+                  <button type="button" className="toolbar-icon-button" aria-label="Open notifications" onClick={() => { setShowNotifications((current) => !current); setShowProfileMenu(false); }}>
+                    <BellIcon />
+                    {notifications.length ? <span>{Math.min(notifications.length, 9)}</span> : null}
+                  </button>
+                  {showNotifications && (
+                    <div className="topbar-panel">
+                      <div className="page-stack compact-gap">
+                        <strong>Notifications</strong>
+                        {notifications.length ? notifications.map((item, index) => <div key={`${item.title}-${index}`} className={`banner ${item.level}`}><strong>{item.title}</strong><p>{item.body}</p></div>) : <p className="muted">No alerts right now.</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ position: "relative" }}>
+                  <button type="button" className="toolbar-user-button" onClick={() => { setShowProfileMenu((current) => !current); setShowNotifications(false); }}>
+                    <span className="toolbar-user-name">{user?.displayName ?? "Finance user"}</span>
+                    <span className="toolbar-user-email">{user?.email ?? "Signed in"}</span>
+                  </button>
+                  {showProfileMenu && (
+                    <div className="topbar-panel profile-menu">
+                      <button type="button" className="secondary" onClick={() => { navigate("/settings"); setShowProfileMenu(false); }}>Open settings</button>
+                      <button type="button" className="secondary" onClick={() => { toggleTheme(); setShowProfileMenu(false); }}>Switch to {theme === "light" ? "dark" : "light"} mode</button>
+                      <button type="button" onClick={() => { logout(); navigate("/login"); }}>Log out</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <Outlet />
+          <button type="button" className="mobile-fab" onClick={() => navigate("/transactions?modal=new")}>
+            Add transaction
+          </button>
         </div>
       </main>
     </div>

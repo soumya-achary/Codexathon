@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface AccountRepository extends JpaRepository<Account, UUID> {
     List<Account> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Account> findByIdInOrderByCreatedAtDesc(List<UUID> ids);
     Optional<Account> findByIdAndUserId(UUID id, UUID userId);
     boolean existsByUserIdAndNameIgnoreCase(UUID userId, String name);
     boolean existsByUserIdAndNameIgnoreCaseAndIdNot(UUID userId, String name, UUID id);

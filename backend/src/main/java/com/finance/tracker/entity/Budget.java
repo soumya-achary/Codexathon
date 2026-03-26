@@ -22,6 +22,10 @@ public class Budget {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
+
     @Column(nullable = false)
     private int month;
 
@@ -45,6 +49,8 @@ public class Budget {
     public void setUser(User user) { this.user = user; }
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
+    public Account getAccount() { return account; }
+    public void setAccount(Account account) { this.account = account; }
     public int getMonth() { return month; }
     public void setMonth(int month) { this.month = month; }
     public int getYear() { return year; }

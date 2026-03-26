@@ -6,8 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -31,15 +29,5 @@ public class AuthController {
     @PostMapping("/refresh")
     public AuthDtos.AuthResponse refresh(@Valid @RequestBody AuthDtos.RefreshRequest request) {
         return authService.refresh(request);
-    }
-
-    @PostMapping("/forgot-password")
-    public AuthDtos.ForgotPasswordResponse forgot(@Valid @RequestBody AuthDtos.ForgotPasswordRequest request) {
-        return authService.forgotPassword(request);
-    }
-
-    @PostMapping("/reset-password")
-    public Map<String, String> reset(@Valid @RequestBody AuthDtos.ResetPasswordRequest request) {
-        return authService.resetPassword(request);
     }
 }

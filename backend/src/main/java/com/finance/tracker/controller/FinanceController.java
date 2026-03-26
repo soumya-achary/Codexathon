@@ -100,6 +100,11 @@ public class FinanceController {
         return financeService.saveTransaction(user.getId(), null, request);
     }
 
+    @PostMapping("/transactions/import")
+    public List<Transaction> importTransactions(@AuthenticationPrincipal AppUserDetails user, @Valid @RequestBody FinanceDtos.TransactionImportRequest request) {
+        return financeService.importTransactions(user.getId(), request);
+    }
+
     @PutMapping("/transactions/{id}")
     public Transaction updateTransaction(@AuthenticationPrincipal AppUserDetails user, @PathVariable UUID id, @Valid @RequestBody FinanceDtos.TransactionRequest request) {
         return financeService.saveTransaction(user.getId(), id, request);
@@ -224,5 +229,77 @@ public class FinanceController {
                                                    @RequestParam(required = false) UUID accountId,
                                                    @RequestParam(required = false) UUID categoryId) {
         return financeService.getReports(user.getId(), startDate, endDate, type, accountId, categoryId);
+    }
+
+    @GetMapping("/insights/health-score")
+    public Map<String, Object> healthScore(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getHealthScore(user.getId());
+    }
+
+    @GetMapping("/insights")
+    public Map<String, Object> insights(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getInsights(user.getId());
+    }
+
+    @GetMapping("/forecast/month")
+    public Map<String, Object> forecastMonth(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getForecastMonth(user.getId());
+    }
+
+    @GetMapping("/forecast/daily")
+    public List<Map<String, Object>> forecastDaily(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getForecastDaily(user.getId());
+    }
+
+    @GetMapping("/rules")
+    public List<Rule> rules(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getRules(user.getId());
+    }
+
+    @PostMapping("/rules")
+    public Rule createRule(@AuthenticationPrincipal AppUserDetails user, @Valid @RequestBody FinanceDtos.RuleRequest request) {
+        return financeService.saveRule(user.getId(), null, request);
+    }
+
+    @PutMapping("/rules/{id}")
+    public Rule updateRule(@AuthenticationPrincipal AppUserDetails user, @PathVariable UUID id, @Valid @RequestBody FinanceDtos.RuleRequest request) {
+        return financeService.saveRule(user.getId(), id, request);
+    }
+
+    @DeleteMapping("/rules/{id}")
+    public void deleteRule(@AuthenticationPrincipal AppUserDetails user, @PathVariable UUID id) {
+        financeService.deleteRule(user.getId(), id);
+    }
+
+    @PostMapping("/accounts/{id}/invite")
+    public Map<String, Object> inviteAccountMember(@AuthenticationPrincipal AppUserDetails user, @PathVariable UUID id, @Valid @RequestBody FinanceDtos.AccountInviteRequest request) {
+        return financeService.inviteAccountMember(user.getId(), id, request);
+    }
+
+    @GetMapping("/accounts/{id}/members")
+    public List<Map<String, Object>> accountMembers(@AuthenticationPrincipal AppUserDetails user, @PathVariable UUID id) {
+        return financeService.getAccountMembers(user.getId(), id);
+    }
+
+    @PutMapping("/accounts/{id}/members/{memberUserId}")
+    public Map<String, Object> updateAccountMember(@AuthenticationPrincipal AppUserDetails user,
+                                                   @PathVariable UUID id,
+                                                   @PathVariable UUID memberUserId,
+                                                   @Valid @RequestBody FinanceDtos.AccountMemberUpdateRequest request) {
+        return financeService.updateAccountMember(user.getId(), id, memberUserId, request);
+    }
+
+    @GetMapping("/reports/trends")
+    public Map<String, Object> reportTrends(@AuthenticationPrincipal AppUserDetails user,
+                                            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                                            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                            @RequestParam(required = false) UUID accountId,
+                                            @RequestParam(required = false) UUID categoryId) {
+        return financeService.getReportTrends(user.getId(), startDate, endDate, accountId, categoryId);
+    }
+
+    @GetMapping("/reports/net-worth")
+    public Map<String, Object> reportNetWorth(@AuthenticationPrincipal AppUserDetails user) {
+        return financeService.getNetWorthReport(user.getId());
     }
 }

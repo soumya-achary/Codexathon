@@ -2,16 +2,13 @@ package com.finance.tracker.service;
 
 import com.finance.tracker.dto.AuthDtos;
 import com.finance.tracker.entity.Category;
-import com.finance.tracker.entity.PasswordResetToken;
 import com.finance.tracker.entity.RefreshToken;
 import com.finance.tracker.entity.User;
 import com.finance.tracker.exception.ApiException;
 import com.finance.tracker.repository.CategoryRepository;
-import com.finance.tracker.repository.PasswordResetTokenRepository;
 import com.finance.tracker.repository.RefreshTokenRepository;
 import com.finance.tracker.repository.UserRepository;
 import com.finance.tracker.security.JwtService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -34,38 +30,29 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final String frontendBaseUrl;
-    private final long resetTokenMinutes;
     private final AuthRateLimitService authRateLimitService;
     private final AuditService auditService;
 
     public AuthService(
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
-            PasswordResetTokenRepository passwordResetTokenRepository,
             CategoryRepository categoryRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtService jwtService,
-            @Value("${app.frontend-base-url:http://localhost:5173}") String frontendBaseUrl,
-            @Value("${app.reset-token-minutes:30}") long resetTokenMinutes,
             AuthRateLimitService authRateLimitService,
             AuditService auditService
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
-        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.frontendBaseUrl = frontendBaseUrl;
-        this.resetTokenMinutes = resetTokenMinutes;
         this.authRateLimitService = authRateLimitService;
         this.auditService = auditService;
     }
@@ -111,42 +98,6 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Refresh token expired");
         }
         return issueTokens(stored.getUser());
-    }
-
-    @Transactional
-    public AuthDtos.ForgotPasswordResponse forgotPassword(AuthDtos.ForgotPasswordRequest request) {
-        passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
-        User user = userRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase()).orElse(null);
-        if (user == null) {
-            return new AuthDtos.ForgotPasswordResponse("If the account exists, a reset link has been prepared.", null);
-        }
-        passwordResetTokenRepository.deleteByUser(user);
-        PasswordResetToken token = new PasswordResetToken();
-        token.setUser(user);
-        token.setToken(UUID.randomUUID() + "-" + UUID.randomUUID().toString().replace("-", ""));
-        token.setExpiresAt(LocalDateTime.now().plusMinutes(resetTokenMinutes));
-        passwordResetTokenRepository.save(token);
-        String resetUrl = frontendBaseUrl + "/login?mode=reset&token=" + token.getToken();
-        auditService.recordEvent(user, "password_reset_requested", Map.of());
-        return new AuthDtos.ForgotPasswordResponse("Reset link created. Open the link below to choose a new password.", resetUrl);
-    }
-
-    @Transactional
-    public Map<String, String> resetPassword(AuthDtos.ResetPasswordRequest request) {
-        passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
-        PasswordResetToken token = passwordResetTokenRepository.findByToken(request.token())
-                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Reset link is invalid or expired"));
-        if (token.isUsed() || token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Reset link is invalid or expired");
-        }
-        User user = token.getUser();
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
-        refreshTokenRepository.deleteByUser(user);
-        token.setUsedAt(LocalDateTime.now());
-        passwordResetTokenRepository.save(token);
-        auditService.recordEvent(user, "password_reset_completed", Map.of());
-        return Map.of("message", "Password reset successfully. Please log in with your new password.");
     }
 
     @Transactional
