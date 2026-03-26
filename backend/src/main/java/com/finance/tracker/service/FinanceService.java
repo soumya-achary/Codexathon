@@ -765,10 +765,11 @@ public class FinanceService {
         Map<LocalDate, BigDecimal> knownIncome = new HashMap<>();
         Map<LocalDate, BigDecimal> knownExpense = new HashMap<>();
         for (RecurringTransaction item : forecastKnownRecurring(userId)) {
+            BigDecimal amount = defaultMoney(item.getAmount());
             if ("income".equalsIgnoreCase(item.getType())) {
-                knownIncome.merge(item.getNextRunDate(), item.getAmount(), BigDecimal::add);
+                knownIncome.merge(item.getNextRunDate(), amount, BigDecimal::add);
             } else {
-                knownExpense.merge(item.getNextRunDate(), item.getAmount(), BigDecimal::add);
+                knownExpense.merge(item.getNextRunDate(), amount, BigDecimal::add);
             }
         }
         BigDecimal avgDailyIncome = averageDailyAmount(userId, "income", 90);
@@ -845,10 +846,14 @@ public class FinanceService {
     }
 
     private List<Map<String, Object>> buildBudgetSnapshot(UUID userId, YearMonth month, List<Transaction> monthTransactions) {
-        return getBudgets(userId, month.getMonthValue(), month.getYear()).stream().map(b -> {
+        return getBudgets(userId, month.getMonthValue(), month.getYear()).stream()
+                .filter(b -> b.getCategory() != null)
+                .map(b -> {
             BigDecimal spent = monthTransactions.stream()
                     .filter(t -> "expense".equalsIgnoreCase(t.getType()) && t.getCategory() != null && t.getCategory().getId().equals(b.getCategory().getId()))
-                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .map(Transaction::getAmount)
+                    .map(this::defaultMoney)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal pct = percentage(spent, b.getAmount());
             String alertLevel = pct.compareTo(BigDecimal.valueOf(120)) >= 0 ? "danger"
                     : pct.compareTo(BigDecimal.valueOf(100)) >= 0 ? "warning"
@@ -1102,7 +1107,9 @@ public class FinanceService {
     }
 
     private BigDecimal sumByType(List<Transaction> transactions, String type) {
-        return transactions.stream().filter(t -> type.equalsIgnoreCase(t.getType())).map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return transactions.stream().filter(t -> type.equalsIgnoreCase(t.getType())).map(Transaction::getAmount)
+                    .map(this::defaultMoney)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal percentage(BigDecimal current, BigDecimal total) {
@@ -1281,7 +1288,10 @@ public class FinanceService {
         List<Transaction> transactions = transactionRepository.findByAccountIdInAndTransactionDateBetween(accessibleAccountIds, start, end).stream()
                 .filter(item -> type.equalsIgnoreCase(item.getType()))
                 .toList();
-        BigDecimal total = transactions.stream().map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = transactions.stream()
+                .map(Transaction::getAmount)
+                .map(this::defaultMoney)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.compareTo(BigDecimal.ZERO) == 0
                 ? BigDecimal.ZERO
                 : total.divide(BigDecimal.valueOf(lookbackDays), 2, RoundingMode.HALF_UP);
@@ -1340,6 +1350,9 @@ public class FinanceService {
         return next;
     }
 }
+
+
+
 
 
 
